@@ -95,6 +95,7 @@ async function run() {
             const result = await db.collection('districts').find().toArray()
             // console.log(result);
             res.send(result)
+            console.log(result)
         })
 
         // Get all upazilas Data from database
