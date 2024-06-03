@@ -30,6 +30,7 @@ async function run() {
         //Create Database Collection
         const db = client.db('diagnosticCenterManagementSystemDB')
         const usersCollection = db.collection('users')
+        const bannersCollection = db.collection('banners')
         const paymentCollection = client.db("bistroDb").collection("payments");
 
         // jwt related api
@@ -95,7 +96,6 @@ async function run() {
             const result = await db.collection('districts').find().toArray()
             // console.log(result);
             res.send(result)
-            console.log(result)
         })
 
         // Get all upazilas Data from database
@@ -105,6 +105,8 @@ async function run() {
             res.send(result)
         })
 
+
+        // ====================> USER RELATED API -- START
 
         // Save user data to mongodb database
         app.post('/user', async (req, res) => {
@@ -120,26 +122,85 @@ async function run() {
             res.send(result);
         });
 
-        app.patch('/users/admin/:id', verifyToken, verifyAdmin, async (req, res) => {
-            const id = req.params.id;
-            const filter = { _id: new ObjectId(id) };
-            const updatedDoc = {
-                $set: {
-                    role: 'admin'
+        // Get user to database by specific email
+        app.get('/user/:email', async (req, res) => {
+            const email = req.params.email;
+            try {
+                const result = await usersCollection.findOne({ email: email });
+                if (!result) {
+                    return res.status(404).send({ message: 'User not found' });
                 }
+                res.send(result);
+            } catch (error) {
+                console.error(error);
+                res.status(500).send({ message: 'Internal Server Error' });
             }
-            const result = await userCollection.updateOne(filter, updatedDoc);
-            res.send(result);
+        });
+
+
+        // app.patch('/users/admin/:id', verifyToken, verifyAdmin, async (req, res) => {
+        //     const id = req.params.id;
+        //     const filter = { _id: new ObjectId(id) };
+        //     const updatedDoc = {
+        //         $set: {
+        //             role: 'admin'
+        //         }
+        //     }
+        //     const result = await userCollection.updateOne(filter, updatedDoc);
+        //     res.send(result);
+        // })
+
+        // app.delete('/users/:id', verifyToken, verifyAdmin, async (req, res) => {
+        //     const id = req.params.id;
+        //     const query = { _id: new ObjectId(id) }
+        //     const result = await userCollection.deleteOne(query);
+        //     res.send(result);
+        // })
+
+        // ====================> USER RELATED API -- END
+
+
+        // ====================> BANNER RELATED API -- START
+
+        // Save banner data to database
+        app.post('/banner', async (req, res) => {
+            const bannerData = req.body
+            const result = await bannersCollection.insertOne(bannerData)
         })
 
-        app.delete('/users/:id', verifyToken, verifyAdmin, async (req, res) => {
-            const id = req.params.id;
-            const query = { _id: new ObjectId(id) }
-            const result = await userCollection.deleteOne(query);
-            res.send(result);
+        app.get('/banners/:email', async (req, res) => {
+            const email = req.params.email
+            const query = { 'adminInfo.email': email }
+            const result = await bannersCollection.find(query).toArray()
+            console.log(result);
+            res.send(result)
         })
+
+
+
+
+
+        // ====================> TEST RELATED API -- END
+
+
+        // ====================> TEST RELATED API -- START
+
+
+        // ====================> TEST RELATED API -- END
+
+
+        // ====================> TEST RELATED API -- START
+
+
+
 
         // menu related apis
+        app.post('/menu', verifyToken, verifyAdmin, async (req, res) => {
+            const item = req.body;
+            const result = await menuCollection.insertOne(item);
+            res.send(result);
+        });
+
         app.get('/menu', async (req, res) => {
             const result = await menuCollection.find().toArray();
             res.send(result);
@@ -152,11 +213,6 @@ async function run() {
             res.send(result);
         })
 
-        app.post('/menu', verifyToken, verifyAdmin, async (req, res) => {
-            const item = req.body;
-            const result = await menuCollection.insertOne(item);
-            res.send(result);
-        });
 
         app.patch('/menu/:id', async (req, res) => {
             const item = req.body;
@@ -210,79 +266,79 @@ async function run() {
         });
 
         // payment intent
-        app.post('/create-payment-intent', async (req, res) => {
-            const { price } = req.body;
-            const amount = parseInt(price * 100);
-            console.log(amount, 'amount inside the intent')
+        // app.post('/create-payment-intent', async (req, res) => {
+        //     const { price } = req.body;
+        //     const amount = parseInt(price * 100);
+        //     console.log(amount, 'amount inside the intent')
 
-            const paymentIntent = await stripe.paymentIntents.create({
-                amount: amount,
-                currency: 'usd',
-                payment_method_types: ['card']
-            });
+        //     const paymentIntent = await stripe.paymentIntents.create({
+        //         amount: amount,
+        //         currency: 'usd',
+        //         payment_method_types: ['card']
+        //     });
 
-            res.send({
-                clientSecret: paymentIntent.client_secret
-            })
-        });
+        //     res.send({
+        //         clientSecret: paymentIntent.client_secret
+        //     })
+        // });
 
 
-        app.get('/payments/:email', verifyToken, async (req, res) => {
-            const query = { email: req.params.email }
-            if (req.params.email !== req.decoded.email) {
-                return res.status(403).send({ message: 'forbidden access' });
-            }
-            const result = await paymentCollection.find(query).toArray();
-            res.send(result);
-        })
+        // app.get('/payments/:email', verifyToken, async (req, res) => {
+        //     const query = { email: req.params.email }
+        //     if (req.params.email !== req.decoded.email) {
+        //         return res.status(403).send({ message: 'forbidden access' });
+        //     }
+        //     const result = await paymentCollection.find(query).toArray();
+        //     res.send(result);
+        // })
 
-        app.post('/payments', async (req, res) => {
-            const payment = req.body;
-            const paymentResult = await paymentCollection.insertOne(payment);
+        // app.post('/payments', async (req, res) => {
+        //     const payment = req.body;
+        //     const paymentResult = await paymentCollection.insertOne(payment);
 
-            //  carefully delete each item from the cart
-            console.log('payment info', payment);
-            const query = {
-                _id: {
-                    $in: payment.cartIds.map(id => new ObjectId(id))
-                }
-            };
+        //     //  carefully delete each item from the cart
+        //     console.log('payment info', payment);
+        //     const query = {
+        //         _id: {
+        //             $in: payment.cartIds.map(id => new ObjectId(id))
+        //         }
+        //     };
 
-            const deleteResult = await cartCollection.deleteMany(query);
+        //     const deleteResult = await cartCollection.deleteMany(query);
 
-            res.send({ paymentResult, deleteResult });
-        })
+        //     res.send({ paymentResult, deleteResult });
+        // })
 
         // stats or analytics
-        app.get('/admin-stats', verifyToken, verifyAdmin, async (req, res) => {
-            const users = await userCollection.estimatedDocumentCount();
-            const menuItems = await menuCollection.estimatedDocumentCount();
-            const orders = await paymentCollection.estimatedDocumentCount();
+        // app.get('/admin-stats', verifyToken, verifyAdmin, async (req, res) => {
+        //     const users = await userCollection.estimatedDocumentCount();
+        //     const menuItems = await menuCollection.estimatedDocumentCount();
+        //     const orders = await paymentCollection.estimatedDocumentCount();
 
-            // this is not the best way
-            // const payments = await paymentCollection.find().toArray();
-            // const revenue = payments.reduce((total, payment) => total + payment.price, 0);
+        //     // this is not the best way
+        //     // const payments = await paymentCollection.find().toArray();
+        //     // const revenue = payments.reduce((total, payment) => total + payment.price, 0);
 
-            const result = await paymentCollection.aggregate([
-                {
-                    $group: {
-                        _id: null,
-                        totalRevenue: {
-                            $sum: '$price'
-                        }
-                    }
-                }
-            ]).toArray();
+        //     const result = await paymentCollection.aggregate([
+        //         {
+        //             $group: {
+        //                 _id: null,
+        //                 totalRevenue: {
+        //                     $sum: '$price'
+        //                 }
+        //             }
+        //         }
+        //     ]).toArray();
 
-            const revenue = result.length > 0 ? result[0].totalRevenue : 0;
+        //     const revenue = result.length > 0 ? result[0].totalRevenue : 0;
 
-            res.send({
-                users,
-                menuItems,
-                orders,
-                revenue
-            })
-        })
+        //     res.send({
+        //         users,
+        //         menuItems,
+        //         orders,
+        //         revenue
+        //     })
+        // })
 
 
         // order status
@@ -296,42 +352,42 @@ async function run() {
         */
 
         // using aggregate pipeline
-        app.get('/order-stats', verifyToken, verifyAdmin, async (req, res) => {
-            const result = await paymentCollection.aggregate([
-                {
-                    $unwind: '$menuItemIds'
-                },
-                {
-                    $lookup: {
-                        from: 'menu',
-                        localField: 'menuItemIds',
-                        foreignField: '_id',
-                        as: 'menuItems'
-                    }
-                },
-                {
-                    $unwind: '$menuItems'
-                },
-                {
-                    $group: {
-                        _id: '$menuItems.category',
-                        quantity: { $sum: 1 },
-                        revenue: { $sum: '$menuItems.price' }
-                    }
-                },
-                {
-                    $project: {
-                        _id: 0,
-                        category: '$_id',
-                        quantity: '$quantity',
-                        revenue: '$revenue'
-                    }
-                }
-            ]).toArray();
+        // app.get('/order-stats', verifyToken, verifyAdmin, async (req, res) => {
+        //     const result = await paymentCollection.aggregate([
+        //         {
+        //             $unwind: '$menuItemIds'
+        //         },
+        //         {
+        //             $lookup: {
+        //                 from: 'menu',
+        //                 localField: 'menuItemIds',
+        //                 foreignField: '_id',
+        //                 as: 'menuItems'
+        //             }
+        //         },
+        //         {
+        //             $unwind: '$menuItems'
+        //         },
+        //         {
+        //             $group: {
+        //                 _id: '$menuItems.category',
+        //                 quantity: { $sum: 1 },
+        //                 revenue: { $sum: '$menuItems.price' }
+        //             }
+        //         },
+        //         {
+        //             $project: {
+        //                 _id: 0,
+        //                 category: '$_id',
+        //                 quantity: '$quantity',
+        //                 revenue: '$revenue'
+        //             }
+        //         }
+        //     ]).toArray();
 
-            res.send(result);
+        //     res.send(result);
 
-        })
+        // })
 
         // Send a ping to confirm a successful connection
         // await client.db("admin").command({ ping: 1 });
@@ -349,7 +405,7 @@ app.get('/', (req, res) => {
 })
 
 app.listen(port, () => {
-    console.log(`Bistro boss is sitting on port ${port}`);
+    console.log(`DCMS is sitting on port ${port}`);
 })
 
 /**
