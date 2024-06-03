@@ -31,6 +31,7 @@ async function run() {
         const db = client.db('diagnosticCenterManagementSystemDB')
         const usersCollection = db.collection('users')
         const bannersCollection = db.collection('banners')
+        const testsCollection = db.collection('tests')
         const paymentCollection = client.db("bistroDb").collection("payments");
 
         // jwt related api
@@ -181,6 +182,13 @@ async function run() {
 
 
         // ====================> TEST RELATED API -- END
+
+        // Save add test data to database
+        app.post('/add-test', async (req, res) => {
+            const testData = req.body
+            const result = await testsCollection.insertOne(testData)
+            console.log(result);
+        })
 
 
         // ====================> TEST RELATED API -- START
