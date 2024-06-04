@@ -146,7 +146,7 @@ async function run() {
         })
 
         //update a user role and status
-        app.patch('/users/update/:email', verifyToken, verifyAdmin, async (req, res) => {
+        app.patch('/users/update/:email', async (req, res) => {
             const email = req.params.email
             const user = req.body
             const query = { email }
@@ -190,16 +190,88 @@ async function run() {
         })
 
         //update a banner isActive Status
+        // app.patch('/banners/update/:id', async (req, res) => {
+        //     const id = req.params.id
+        //     const banner = req.body
+        //     const alreadyActive = banner.isActive === 'true'
+        //     if (alreadyActive) {
+        //         return { message: 'already a banner is active' }
+        //     } else {
+        //         const query = { _id: new ObjectId(id) }
+        //         const updateDoc = {
+        //             $set: { ...banner, timestamp: Date.now() },
+        //         }
+        //         const result = await bannersCollection.updateOne(query, updateDoc)
+        //     }
+        //     res.send(result)
+        // })
+
+
+        // app.patch('/banners/update/:id', async (req, res) => {
+        //     const id = req.params.id;
+        //     const banner = req.body;
+
+        //     if (!ObjectId.isValid(id)) {
+        //         return res.status(400).json({ message: 'Invalid banner ID' });
+        //     }
+
+        //     if (typeof banner.isActive !== 'string') {
+        //         return res.status(400).json({ message: 'Invalid value for isActive' });
+        //     }
+
+        //     const isActive = banner.isActive === 'true';
+
+        //     try {
+        //         const query = { _id: new ObjectId(id) };
+
+        //         if (isActive) {
+        //             await bannersCollection.updateMany(
+        //                 { isActive: true },
+        //                 { $set: { isActive: false } }
+        //             );
+        //         }
+
+        //         const updateDoc = {
+        //             $set: { ...banner, timestamp: Date.now() },
+        //         };
+        //         const result = await bannersCollection.updateOne(query, updateDoc);
+
+        //         if (result.matchedCount === 0) {
+        //             return res.status(404).json({ message: 'Banner not found' });
+        //         }
+
+        //         res.json({ message: 'Banner updated successfully', result });
+        //     } catch (error) {
+        //         console.error(error);
+        //         res.status(500).json({ message: 'An error occurred while updating the banner' });
+        //     }
+        // });
         app.patch('/banners/update/:id', async (req, res) => {
-            const id = req.params.id
-            const banner = req.body
-            const query = { _id: new ObjectId(id) }
-            const updateDoc = {
-                $set: { ...banner, timestamp: Date.now() },
+            const id = req.params.id;
+            const banner = req.body;
+        
+            try {
+                const query = { _id: new ObjectId(id) };
+        
+                if (banner.isActive) {
+                    // Set all other banners to inactive
+                    await bannersCollection.updateMany(
+                        { _id: { $ne: new ObjectId(id) } },
+                        { $set: { isActive: false } }
+                    );
+                }
+        
+                const updateDoc = {
+                    $set: { ...banner, timestamp: Date.now() },
+                };
+                const result = await bannersCollection.updateOne(query, updateDoc);
+                
+                res.json({ message: 'Banner updated successfully', result });
+            } catch (error) {
+                console.error(error);
+                res.status(500).json({ message: 'An error occurred while updating the banner' });
             }
-            const result = await bannersCollection.updateOne(query, updateDoc)
-            res.send(result)
-        })
+        });
 
 
 
