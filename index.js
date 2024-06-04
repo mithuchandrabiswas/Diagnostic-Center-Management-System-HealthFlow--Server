@@ -145,8 +145,8 @@ async function run() {
             res.send(result)
         })
 
-        //update a user role
-        app.patch('/users/update/:email', async (req, res) => {
+        //update a user role and status
+        app.patch('/users/update/:email', verifyToken, verifyAdmin, async (req, res) => {
             const email = req.params.email
             const user = req.body
             const query = { email }
@@ -156,7 +156,7 @@ async function run() {
             const result = await usersCollection.updateOne(query, updateDoc)
             res.send(result)
         })
-        
+
 
         // app.delete('/users/:id', verifyToken, verifyAdmin, async (req, res) => {
         //     const id = req.params.id;
@@ -176,11 +176,28 @@ async function run() {
             const result = await bannersCollection.insertOne(bannerData)
         })
 
+        app.get('/banners', async (req, res) => {
+            const result = await bannersCollection.find().toArray()
+            res.send(result)
+        })
+
         app.get('/banners/:email', async (req, res) => {
             const email = req.params.email
             const query = { 'adminInfo.email': email }
             const result = await bannersCollection.find(query).toArray()
             console.log(result);
+            res.send(result)
+        })
+
+        //update a banner isActive Status
+        app.patch('/banners/update/:id', async (req, res) => {
+            const id = req.params.id
+            const banner = req.body
+            const query = { _id: new ObjectId(id) }
+            const updateDoc = {
+                $set: { ...banner, timestamp: Date.now() },
+            }
+            const result = await bannersCollection.updateOne(query, updateDoc)
             res.send(result)
         })
 
