@@ -32,6 +32,7 @@ async function run() {
         const usersCollection = db.collection('users')
         const bannersCollection = db.collection('banners')
         const testsCollection = db.collection('tests')
+        const appointmentsCollection = db.collection('appointments')
         const paymentCollection = client.db("bistroDb").collection("payments");
 
         // jwt related api
@@ -123,7 +124,7 @@ async function run() {
             res.send(result);
         });
 
-        // Get user to database by specific email
+        // Get user to database by specific email for get user role
         app.get('/user/:email', async (req, res) => {
             const email = req.params.email;
             try {
@@ -138,18 +139,24 @@ async function run() {
             }
         });
 
+        // get all users data from db
+        app.get('/users', async (req, res) => {
+            const result = await usersCollection.find().toArray()
+            res.send(result)
+        })
 
-        // app.patch('/users/admin/:id', verifyToken, verifyAdmin, async (req, res) => {
-        //     const id = req.params.id;
-        //     const filter = { _id: new ObjectId(id) };
-        //     const updatedDoc = {
-        //         $set: {
-        //             role: 'admin'
-        //         }
-        //     }
-        //     const result = await userCollection.updateOne(filter, updatedDoc);
-        //     res.send(result);
-        // })
+        //update a user role
+        app.patch('/users/update/:email', async (req, res) => {
+            const email = req.params.email
+            const user = req.body
+            const query = { email }
+            const updateDoc = {
+                $set: { ...user, timestamp: Date.now() },
+            }
+            const result = await usersCollection.updateOne(query, updateDoc)
+            res.send(result)
+        })
+        
 
         // app.delete('/users/:id', verifyToken, verifyAdmin, async (req, res) => {
         //     const id = req.params.id;
@@ -183,21 +190,33 @@ async function run() {
 
         // ====================> TEST RELATED API -- END
 
+
+
+        // ====================> TEST RELATED API -- START
+
         // Save add test data to database
-        app.post('/add-test', async (req, res) => {
+        app.post('/test', async (req, res) => {
             const testData = req.body
             const result = await testsCollection.insertOne(testData)
             console.log(result);
         })
 
-
-        // ====================> TEST RELATED API -- START
-
-
         // ====================> TEST RELATED API -- END
+        app.get('/tests', async (req, res) => {
+            const email = req.params.email
+            const query = { 'adminInfo.email': email }
+            const result = await testsCollection.find(query).toArray
+            console.log(result);
+            res.send(res)
+        })
 
 
-        // ====================> TEST RELATED API -- START
+        // ====================> APPOINTMENTS RELATED API -- START
+
+
+
+
+        // ====================> APPOINTMENTS RELATED API -- END
 
 
 
