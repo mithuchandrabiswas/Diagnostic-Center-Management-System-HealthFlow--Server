@@ -4,7 +4,7 @@ const app = express();
 const cors = require('cors');
 const jwt = require('jsonwebtoken');
 require('dotenv').config();
-// const stripe = require('stripe')(process.env.VITE_STRIPE_Secret_key);
+const stripe = require('stripe')(process.env.VITE_STRIPE_Secret_key);
 
 const port = process.env.PORT || 9000;
 
@@ -33,7 +33,7 @@ async function run() {
         const bannersCollection = db.collection('banners')
         const testsCollection = db.collection('tests')
         const appointmentsCollection = db.collection('appointments')
-        const paymentCollection = client.db("bistroDb").collection("payments");
+        const paymentCollection = db.collection("payments");
 
         // jwt related api
         app.post('/jwt', async (req, res) => {
@@ -249,10 +249,10 @@ async function run() {
         app.patch('/banners/update/:id', async (req, res) => {
             const id = req.params.id;
             const banner = req.body;
-        
+
             try {
                 const query = { _id: new ObjectId(id) };
-        
+
                 if (banner.isActive) {
                     // Set all other banners to inactive
                     await bannersCollection.updateMany(
@@ -260,12 +260,12 @@ async function run() {
                         { $set: { isActive: false } }
                     );
                 }
-        
+
                 const updateDoc = {
                     $set: { ...banner, timestamp: Date.now() },
                 };
                 const result = await bannersCollection.updateOne(query, updateDoc);
-                
+
                 res.json({ message: 'Banner updated successfully', result });
             } catch (error) {
                 console.error(error);
@@ -290,14 +290,30 @@ async function run() {
             console.log(result);
         })
 
-        // ====================> TEST RELATED API -- END
+        // get all tests
         app.get('/tests', async (req, res) => {
+            const result = await testsCollection.find().toArray()
+            // console.log(result);
+            res.send(result)
+        })
+
+        // Get a single room data from db using _id
+        app.get('/test-details/:id', async (req, res) => {
+            const id = req.params.id
+            const query = { _id: new ObjectId(id) }
+            const result = await testsCollection.findOne(query)
+            res.send(result)
+        })
+
+        app.get('/tests/:email', async (req, res) => {
             const email = req.params.email
             const query = { 'adminInfo.email': email }
-            const result = await testsCollection.find(query).toArray
-            console.log(result);
-            res.send(res)
+            const result = await testsCollection.find(query).toArray()
+            // console.log(result);
+            res.send(result)
         })
+
+        // ====================> TEST RELATED API -- END
 
 
         // ====================> APPOINTMENTS RELATED API -- START
@@ -382,21 +398,21 @@ async function run() {
         });
 
         // payment intent
-        // app.post('/create-payment-intent', async (req, res) => {
-        //     const { price } = req.body;
-        //     const amount = parseInt(price * 100);
-        //     console.log(amount, 'amount inside the intent')
+        app.post('/create-payment-intent', async (req, res) => {
+            const { price } = req.body;
+            const amount = parseInt(price * 100);
+            console.log(amount, 'amount inside the intent')
 
-        //     const paymentIntent = await stripe.paymentIntents.create({
-        //         amount: amount,
-        //         currency: 'usd',
-        //         payment_method_types: ['card']
-        //     });
+            const paymentIntent = await stripe.paymentIntents.create({
+                amount: amount,
+                currency: 'usd',
+                payment_method_types: ['card']
+            });
 
-        //     res.send({
-        //         clientSecret: paymentIntent.client_secret
-        //     })
-        // });
+            res.send({
+                clientSecret: paymentIntent.client_secret
+            })
+        });
 
 
         // app.get('/payments/:email', verifyToken, async (req, res) => {
@@ -408,22 +424,22 @@ async function run() {
         //     res.send(result);
         // })
 
-        // app.post('/payments', async (req, res) => {
-        //     const payment = req.body;
-        //     const paymentResult = await paymentCollection.insertOne(payment);
+        app.post('/payments', async (req, res) => {
+            const payment = req.body;
+            const paymentResult = await paymentCollection.insertOne(payment);
 
-        //     //  carefully delete each item from the cart
-        //     console.log('payment info', payment);
-        //     const query = {
-        //         _id: {
-        //             $in: payment.cartIds.map(id => new ObjectId(id))
-        //         }
-        //     };
+            // //  carefully delete each item from the cart
+            // console.log('payment info', payment);
+            // const query = {
+            //     _id: {
+            //         $in: payment.cartIds.map(id => new ObjectId(id))
+            //     }
+            // };
 
-        //     const deleteResult = await cartCollection.deleteMany(query);
+            // const deleteResult = await cartCollection.deleteMany(query);
 
-        //     res.send({ paymentResult, deleteResult });
-        // })
+            res.send({ paymentResult});
+        })
 
         // stats or analytics
         // app.get('/admin-stats', verifyToken, verifyAdmin, async (req, res) => {
