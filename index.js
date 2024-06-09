@@ -107,6 +107,15 @@ async function run() {
             res.send(result)
         })
 
+        // Get all recommendations Data from database
+        app.get('/recommendations', async (req, res) => {
+            const result = await db.collection('recommendations').find().toArray()
+            // console.log(result);
+            res.send(result)
+        })
+
+        
+
 
         // ====================> USER RELATED API -- START
 
@@ -428,17 +437,7 @@ async function run() {
             const payment = req.body;
             const paymentResult = await paymentCollection.insertOne(payment);
 
-            // //  carefully delete each item from the cart
-            // console.log('payment info', payment);
-            // const query = {
-            //     _id: {
-            //         $in: payment.cartIds.map(id => new ObjectId(id))
-            //     }
-            // };
-
-            // const deleteResult = await cartCollection.deleteMany(query);
-
-            res.send({ paymentResult});
+            res.send({ paymentResult });
         })
 
         // stats or analytics
