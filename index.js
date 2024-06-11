@@ -109,12 +109,12 @@ async function run() {
 
         // Get all recommendations Data from database
         app.get('/recommendations', async (req, res) => {
-            const result = await db.collection('recommendations').find().toArray()
+            const result = await db.collection('recommendationsData').find().toArray()
             // console.log(result);
             res.send(result)
         })
 
-        
+
 
 
         // ====================> USER RELATED API -- START
@@ -215,7 +215,6 @@ async function run() {
         //     res.send(result)
         // })
 
-
         // app.patch('/banners/update/:id', async (req, res) => {
         //     const id = req.params.id;
         //     const banner = req.body;
@@ -255,13 +254,12 @@ async function run() {
         //         res.status(500).json({ message: 'An error occurred while updating the banner' });
         //     }
         // });
+
         app.patch('/banners/update/:id', async (req, res) => {
             const id = req.params.id;
             const banner = req.body;
-
             try {
                 const query = { _id: new ObjectId(id) };
-
                 if (banner.isActive) {
                     // Set all other banners to inactive
                     await bannersCollection.updateMany(
@@ -269,7 +267,6 @@ async function run() {
                         { $set: { isActive: false } }
                     );
                 }
-
                 const updateDoc = {
                     $set: { ...banner, timestamp: Date.now() },
                 };
@@ -286,7 +283,7 @@ async function run() {
 
 
 
-        // ====================> TEST RELATED API -- END
+        // ====================> BANNER RELATED API -- END
 
 
 
@@ -326,8 +323,25 @@ async function run() {
 
 
         // ====================> APPOINTMENTS RELATED API -- START
+         // Save add test data to database
+         app.post('/appointment', async (req, res) => {
+            const appointmentData = req.body
+            const result = await appointmentsCollection.insertOne(appointmentData)
+            console.log(result);
+        })
+        app.get('/appointments/:email', async (req, res) => {
+            const email = req.params.email
+            const query = { 'bookerInfo.email': email }
+            const result = await appointmentsCollection.find(query).toArray()
+            // console.log(result);
+            res.send(result)
+        })
 
 
+
+
+
+ 
 
 
         // ====================> APPOINTMENTS RELATED API -- END
