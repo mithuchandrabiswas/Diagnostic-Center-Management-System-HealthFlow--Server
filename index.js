@@ -323,12 +323,44 @@ async function run() {
 
 
         // ====================> APPOINTMENTS RELATED API -- START
-         // Save add test data to database
-         app.post('/appointment', async (req, res) => {
-            const appointmentData = req.body
-            const result = await appointmentsCollection.insertOne(appointmentData)
-            console.log(result);
-        })
+        // Save add test data to database
+        //  app.post('/appointment', async (req, res) => {
+        //     const appointmentData = req.body
+        //     const result = await appointmentsCollection.insertOne(appointmentData)
+        //     console.log(result);
+        // })
+
+        app.post('/appointment', async (req, res) => {
+            const appointmentData = req.body;
+            const { testId } = appointmentData;
+            const session = client.startSession();
+            try {
+                session.startTransaction();
+                // Insert the new appointment
+                const result = await appointmentsCollection.insertOne(appointmentData, { session });
+        
+                // Decrement total_slots in testsCollection
+                const query = { _id: new ObjectId(testId) };
+                const update = { $inc: { total_slots: -1 } };
+                const updateResult = await testsCollection.updateOne(query, update, { session });
+        
+                if (updateResult.modifiedCount === 0) {
+                    throw new Error('Failed to update test slots');
+                }
+        
+                await session.commitTransaction();
+                res.send(result.ops[0]); // Assuming you want to send back the inserted appointment document
+            } catch (error) {
+                await session.abortTransaction();
+                res.status(500).send({ message: 'Failed to book appointment and update test slots', error });
+            } finally {
+                session.endSession();
+            }
+        });
+        
+
+
+
         app.get('/appointments/:email', async (req, res) => {
             const email = req.params.email
             const query = { 'bookerInfo.email': email }
@@ -341,7 +373,7 @@ async function run() {
 
 
 
- 
+
 
 
         // ====================> APPOINTMENTS RELATED API -- END
