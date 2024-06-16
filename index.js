@@ -154,6 +154,13 @@ async function run() {
             res.send(result)
         })
 
+        app.get('/user/:email', async (req, res) => {
+            const email = req.params.email
+            const query = { email }
+            const result = await usersCollection.findOne(query)
+            res.send(result)
+        })
+
         //update a user role and status
         app.patch('/users/update/:email', async (req, res) => {
             const email = req.params.email
@@ -165,6 +172,39 @@ async function run() {
             const result = await usersCollection.updateOne(query, updateDoc)
             res.send(result)
         })
+
+        //update a user role and status
+        // Update user endpoint
+        app.patch('/user/update/:email', async (req, res) => {
+            const { email } = req.params;
+            const { name, image_url, blood_group, district, upazila } = req.body;
+
+            try {
+                const updatedUser = await User.findOneAndUpdate(
+                    { email },
+                    {
+                        $set: {
+                            name,
+                            image_url,
+                            blood_group,
+                            district,
+                            upazila,
+                            updatedAt: new Date(),
+                        },
+                    },
+                    { new: true }
+                );
+
+                if (!updatedUser) {
+                    return res.status(404).json({ message: 'User not found' });
+                }
+
+                res.status(200).json(updatedUser);
+            } catch (error) {
+                res.status(500).json({ message: error.message });
+            }
+        });
+
 
 
         // app.delete('/users/:id', verifyToken, verifyAdmin, async (req, res) => {
@@ -179,108 +219,80 @@ async function run() {
 
         // ====================> BANNER RELATED API -- START
 
-        // Save banner data to database
+        // Add a new banner
         app.post('/banner', async (req, res) => {
-            const bannerData = req.body
-            const result = await bannersCollection.insertOne(bannerData)
-        })
-
-        app.get('/banners', async (req, res) => {
-            const result = await bannersCollection.find().toArray()
-            res.send(result)
-        })
-
-        app.get('/banners/:email', async (req, res) => {
-            const email = req.params.email
-            const query = { 'adminInfo.email': email }
-            const result = await bannersCollection.find(query).toArray()
-            console.log(result);
-            res.send(result)
-        })
-
-        //update a banner isActive Status
-        // app.patch('/banners/update/:id', async (req, res) => {
-        //     const id = req.params.id
-        //     const banner = req.body
-        //     const alreadyActive = banner.isActive === 'true'
-        //     if (alreadyActive) {
-        //         return { message: 'already a banner is active' }
-        //     } else {
-        //         const query = { _id: new ObjectId(id) }
-        //         const updateDoc = {
-        //             $set: { ...banner, timestamp: Date.now() },
-        //         }
-        //         const result = await bannersCollection.updateOne(query, updateDoc)
-        //     }
-        //     res.send(result)
-        // })
-
-        // app.patch('/banners/update/:id', async (req, res) => {
-        //     const id = req.params.id;
-        //     const banner = req.body;
-
-        //     if (!ObjectId.isValid(id)) {
-        //         return res.status(400).json({ message: 'Invalid banner ID' });
-        //     }
-
-        //     if (typeof banner.isActive !== 'string') {
-        //         return res.status(400).json({ message: 'Invalid value for isActive' });
-        //     }
-
-        //     const isActive = banner.isActive === 'true';
-
-        //     try {
-        //         const query = { _id: new ObjectId(id) };
-
-        //         if (isActive) {
-        //             await bannersCollection.updateMany(
-        //                 { isActive: true },
-        //                 { $set: { isActive: false } }
-        //             );
-        //         }
-
-        //         const updateDoc = {
-        //             $set: { ...banner, timestamp: Date.now() },
-        //         };
-        //         const result = await bannersCollection.updateOne(query, updateDoc);
-
-        //         if (result.matchedCount === 0) {
-        //             return res.status(404).json({ message: 'Banner not found' });
-        //         }
-
-        //         res.json({ message: 'Banner updated successfully', result });
-        //     } catch (error) {
-        //         console.error(error);
-        //         res.status(500).json({ message: 'An error occurred while updating the banner' });
-        //     }
-        // });
-
-        app.patch('/banners/update/:id', async (req, res) => {
-            const id = req.params.id;
-            const banner = req.body;
             try {
+                const bannerData = req.body;
+                const result = await bannersCollection.insertOne(bannerData);
+                res.status(201).send(result); // Send response with inserted document
+            } catch (error) {
+                console.error(error);
+                res.status(500).send('Failed to add banner'); // Send error message as text
+            }
+        });
+
+        // Get all banners
+        app.get('/banners', async (req, res) => {
+            try {
+                const result = await bannersCollection.find().toArray();
+                res.send(result); // Send response with array of banners
+            } catch (error) {
+                console.error(error);
+                res.status(500).send('Failed to fetch banners'); // Send error message as text
+            }
+        });
+
+        // Get banners by admin email
+        app.get('/banners/:email', async (req, res) => {
+            try {
+                const email = req.params.email;
+                const query = { 'adminInfo.email': email };
+                const result = await bannersCollection.find(query).toArray();
+                res.send(result); // Send response with array of banners
+            } catch (error) {
+                console.error(error);
+                res.status(500).send('Failed to fetch banners by email'); // Send error message as text
+            }
+        });
+
+        // Update banner by ID
+        app.patch('/banners/update/:id', async (req, res) => {
+            try {
+                const id = req.params.id;
+                const banner = req.body;
                 const query = { _id: new ObjectId(id) };
+
                 if (banner.isActive) {
-                    // Set all other banners to inactive
+                    // Set all other banners to inactive except the current one
                     await bannersCollection.updateMany(
                         { _id: { $ne: new ObjectId(id) } },
                         { $set: { isActive: false } }
                     );
                 }
+
                 const updateDoc = {
                     $set: { ...banner, timestamp: Date.now() },
                 };
-                const result = await bannersCollection.updateOne(query, updateDoc);
 
-                res.json({ message: 'Banner updated successfully', result });
+                const result = await bannersCollection.updateOne(query, updateDoc);
+                res.send({ message: 'Banner updated successfully', result }); // Send response with update result
             } catch (error) {
                 console.error(error);
-                res.status(500).json({ message: 'An error occurred while updating the banner' });
+                res.status(500).send('Failed to update banner'); // Send error message as text
             }
         });
 
-
-
+        // Delete banner by ID
+        app.delete('/banner/:id', async (req, res) => {
+            try {
+                const id = req.params.id;
+                const result = await bannersCollection.deleteOne({ _id: new ObjectId(id) });
+                res.send({ message: 'Banner deleted successfully', result });
+            } catch (error) {
+                console.error(error);
+                res.status(500).send('Failed to delete banner');
+            }
+        });
 
 
         // ====================> BANNER RELATED API -- END
@@ -303,6 +315,35 @@ async function run() {
             res.send(result)
         })
 
+        // app.get('/tests', async (req, res) => {
+        //     const { page = 1, date } = req.query;
+        //     const pageSize = 10; // Number of tests per page
+        //     const currentDate = new Date().toISOString().split('T')[0]; // Current date in YYYY-MM-DD format
+
+        //     // Construct the query filter
+        //     const dateFilter = date ? new Date(date) : new Date(currentDate);
+        //     const filter = { date: { $gte: dateFilter } };
+
+        //     try {
+        //         const result = await testsCollection.find(filter)
+        //             .skip((page - 1) * pageSize)
+        //             .limit(pageSize)
+        //             .toArray();
+
+        //         const totalTests = await testsCollection.countDocuments(filter);
+        //         const totalPages = Math.ceil(totalTests / pageSize);
+
+        //         res.send({
+        //             tests: result,
+        //             totalPages,
+        //             currentPage: page,
+        //         });
+        //     } catch (error) {
+        //         console.error("Error fetching tests:", error);
+        //         res.status(500).send("Internal Server Error");
+        //     }
+        // });
+
         // Get a single room data from db using _id
         app.get('/test-details/:id', async (req, res) => {
             const id = req.params.id
@@ -310,6 +351,17 @@ async function run() {
             const result = await testsCollection.findOne(query)
             res.send(result)
         })
+
+        app.put('/test/:id', async (req, res) => {
+            const id = req.params.id;
+            const updateData = req.body;
+            const query = { _id: new ObjectId(id) };
+            const updateDoc = {
+                $set: updateData,
+            };
+            const result = await testsCollection.updateOne(query, updateDoc);
+            res.send(result);
+        });
 
         app.get('/tests/:email', async (req, res) => {
             const email = req.params.email
@@ -324,133 +376,156 @@ async function run() {
 
         // ====================> APPOINTMENTS RELATED API -- START
         // Save add test data to database
-        //  app.post('/appointment', async (req, res) => {
-        //     const appointmentData = req.body
-        //     const result = await appointmentsCollection.insertOne(appointmentData)
-        //     console.log(result);
-        // })
-
         app.post('/appointment', async (req, res) => {
             const appointmentData = req.body;
             const { testId } = appointmentData;
             const session = client.startSession();
+            let transactionCommitted = false;
+
             try {
                 session.startTransaction();
+
                 // Insert the new appointment
                 const result = await appointmentsCollection.insertOne(appointmentData, { session });
-        
+
+                // Ensure appointment was inserted
+                if (!result.insertedId) {
+                    throw new Error('Failed to insert appointment');
+                }
+
                 // Decrement total_slots in testsCollection
                 const query = { _id: new ObjectId(testId) };
                 const update = { $inc: { total_slots: -1 } };
                 const updateResult = await testsCollection.updateOne(query, update, { session });
-        
+
                 if (updateResult.modifiedCount === 0) {
                     throw new Error('Failed to update test slots');
                 }
-        
+
                 await session.commitTransaction();
-                res.send(result.ops[0]); // Assuming you want to send back the inserted appointment document
+                transactionCommitted = true;
+
+                // Return the inserted appointment document
+                const insertedAppointment = await appointmentsCollection.findOne({ _id: result.insertedId }, { session });
+                res.send(insertedAppointment);
             } catch (error) {
-                await session.abortTransaction();
-                res.status(500).send({ message: 'Failed to book appointment and update test slots', error });
+                if (!transactionCommitted) {
+                    await session.abortTransaction();
+                }
+                console.error('Error booking appointment:', error);
+                res.status(500).send({ message: 'Failed to book appointment and update test slots', error: error.message });
             } finally {
                 session.endSession();
             }
         });
-        
 
+        // get all tests
+        app.get('/appointments', async (req, res) => {
+            const result = await appointmentsCollection.find().toArray()
+            // console.log(result);
+            res.send(result)
+        })
 
+        app.delete('/appointment/:id', async (req, res) => {
+            const id = req.params.id;
+            const session = client.startSession();
+            let transactionCommitted = false;
 
-        app.get('/appointments/:email', async (req, res) => {
+            try {
+                session.startTransaction();
+
+                // Retrieve the appointment to get the testId
+                const appointment = await appointmentsCollection.findOne({ _id: new ObjectId(id) }, { session });
+                if (!appointment) {
+                    throw new Error('Appointment not found');
+                }
+
+                const testId = appointment.testId;
+
+                // Delete the appointment
+                const result = await appointmentsCollection.deleteOne({ _id: new ObjectId(id) }, { session });
+                if (result.deletedCount === 0) {
+                    throw new Error('Failed to delete appointment');
+                }
+
+                // Increment total_slots in testsCollection
+                const incQuery = { _id: new ObjectId(testId) };
+                const update = { $inc: { total_slots: 1 } };
+                const updateResult = await testsCollection.updateOne(incQuery, update, { session });
+                if (updateResult.modifiedCount === 0) {
+                    throw new Error('Failed to update test slots');
+                }
+
+                await session.commitTransaction();
+                transactionCommitted = true;
+
+                res.send({ message: 'Appointment deleted and test slots updated successfully' });
+            } catch (error) {
+                if (!transactionCommitted) {
+                    await session.abortTransaction();
+                }
+                console.error('Error deleting appointment:', error);
+                res.status(500).send({ message: 'Failed to delete appointment and update test slots', error: error.message });
+            } finally {
+                session.endSession();
+            }
+        });
+
+        app.put('/appointment/:id', async (req, res) => {
+            console.log('Received PUT request to update report_status');
+            const id = req.params.id;
+            const updateData = req.body;
+            console.log(`Updating appointment ID: ${id} with data:`, updateData);
+            const query = { _id: new ObjectId(id) };
+            const updateDoc = {
+                $set: updateData,
+            };
+            try {
+                const result = await appointmentsCollection.updateOne(query, updateDoc);
+                console.log('Update result:', result);
+                if (result.modifiedCount === 1) {
+                    res.status(200).send({ message: 'Appointment updated successfully' });
+                } else {
+                    res.status(404).send({ message: 'Appointment not found or already updated' });
+                }
+            } catch (error) {
+                console.error('Error updating appointment:', error);
+                res.status(500).send({ message: 'Error updating appointment', error });
+            }
+        });
+
+        app.get('/tests/:email', async (req, res) => {
             const email = req.params.email
-            const query = { 'bookerInfo.email': email }
-            const result = await appointmentsCollection.find(query).toArray()
+            const query = { 'adminInfo.email': email }
+            const result = await testsCollection.find(query).toArray()
             // console.log(result);
             res.send(result)
         })
 
 
+        // app.get('/appointments/:email', async (req, res) => {
+        //     const email = req.params.email
+        //     const query = { 'bookerInfo.email': email }
+        //     const result = await appointmentsCollection.find(query).toArray()
+        //     // console.log(result);
+        //     res.send(result)
+        // })
+        app.get('/appointments/:email', async (req, res) => {
+            const email = req.params.email;
+            const query = { 'bookerInfo.email': email };
 
-
-
+            try {
+                const result = await appointmentsCollection.find(query).toArray();
+                res.send(result);
+            } catch (error) {
+                console.error('Error fetching appointments:', error);
+                res.status(500).send({ message: 'Failed to fetch appointments', error: error.message });
+            }
+        });
 
 
 
         // ====================> APPOINTMENTS RELATED API -- END
-
-
-
-
-        // menu related apis
-        app.post('/menu', verifyToken, verifyAdmin, async (req, res) => {
-            const item = req.body;
-            const result = await menuCollection.insertOne(item);
-            res.send(result);
-        });
-
-        app.get('/menu', async (req, res) => {
-            const result = await menuCollection.find().toArray();
-            res.send(result);
-        });
-
-        app.get('/menu/:id', async (req, res) => {
-            const id = req.params.id;
-            const query = { _id: new ObjectId(id) }
-            const result = await menuCollection.findOne(query);
-            res.send(result);
-        })
-
-
-        app.patch('/menu/:id', async (req, res) => {
-            const item = req.body;
-            const id = req.params.id;
-            const filter = { _id: new ObjectId(id) }
-            const updatedDoc = {
-                $set: {
-                    name: item.name,
-                    category: item.category,
-                    price: item.price,
-                    recipe: item.recipe,
-                    image: item.image
-                }
-            }
-
-            const result = await menuCollection.updateOne(filter, updatedDoc)
-            res.send(result);
-        })
-
-        app.delete('/menu/:id', verifyToken, verifyAdmin, async (req, res) => {
-            const id = req.params.id;
-            const query = { _id: new ObjectId(id) }
-            const result = await menuCollection.deleteOne(query);
-            res.send(result);
-        })
-
-        app.get('/reviews', async (req, res) => {
-            const result = await reviewCollection.find().toArray();
-            res.send(result);
-        })
-
-        // carts collection
-        app.get('/carts', async (req, res) => {
-            const email = req.query.email;
-            const query = { email: email };
-            const result = await cartCollection.find(query).toArray();
-            res.send(result);
-        });
-
-        app.post('/carts', async (req, res) => {
-            const cartItem = req.body;
-            const result = await cartCollection.insertOne(cartItem);
-            res.send(result);
-        });
-
-        app.delete('/carts/:id', async (req, res) => {
-            const id = req.params.id;
-            const query = { _id: new ObjectId(id) }
-            const result = await cartCollection.deleteOne(query);
-            res.send(result);
-        });
 
         // payment intent
         app.post('/create-payment-intent', async (req, res) => {
