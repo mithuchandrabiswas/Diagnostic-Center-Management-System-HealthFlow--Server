@@ -173,12 +173,11 @@ async function run() {
             res.send(result)
         })
 
-        //update a user role and status
-        // Update user endpoint
-        app.patch('/user/update/:email', async (req, res) => {
+        // Update user data
+        app.put('/user/update/:email', async (req, res) => {
             const { email } = req.params;
             const { name, image_url, blood_group, district, upazila } = req.body;
-
+        
             try {
                 const updatedUser = await User.findOneAndUpdate(
                     { email },
@@ -194,25 +193,19 @@ async function run() {
                     },
                     { new: true }
                 );
-
+        
                 if (!updatedUser) {
-                    return res.status(404).json({ message: 'User not found' });
+                    return res.status(404).send({ message: 'User not found' });
                 }
-
-                res.status(200).json(updatedUser);
+        
+                res.status(200).send(updatedUser);
             } catch (error) {
-                res.status(500).json({ message: error.message });
+                console.error(error);
+                res.status(500).send({ message: 'Failed to update user' });
             }
         });
+        
 
-
-
-        // app.delete('/users/:id', verifyToken, verifyAdmin, async (req, res) => {
-        //     const id = req.params.id;
-        //     const query = { _id: new ObjectId(id) }
-        //     const result = await userCollection.deleteOne(query);
-        //     res.send(result);
-        // })
 
         // ====================> USER RELATED API -- END
 
@@ -300,13 +293,17 @@ async function run() {
 
 
         // ====================> TEST RELATED API -- START
-
-        // Save add test data to database
+        // Add a new banner
         app.post('/test', async (req, res) => {
-            const testData = req.body
-            const result = await testsCollection.insertOne(testData)
-            console.log(result);
-        })
+            try {
+                const testData = req.body
+                const result = await testsCollection.insertOne(testData)
+                res.status(201).send(result); // Send response with inserted document
+            } catch (error) {
+                console.error(error);
+                res.status(500).send('Failed to add test'); // Send error message as text
+            }
+        });
 
         // get all tests
         app.get('/tests', async (req, res) => {
@@ -361,6 +358,18 @@ async function run() {
             };
             const result = await testsCollection.updateOne(query, updateDoc);
             res.send(result);
+        });
+
+        // Delete test by ID
+        app.delete('/test/:id', async (req, res) => {
+            try {
+                const id = req.params.id;
+                const result = await testsCollection.deleteOne({ _id: new ObjectId(id) });
+                res.send({ message: 'Test deleted successfully', result });
+            } catch (error) {
+                console.error(error);
+                res.status(500).send('Failed to delete test');
+            }
         });
 
         app.get('/tests/:email', async (req, res) => {
