@@ -177,7 +177,7 @@ async function run() {
         app.put('/user/update/:email', async (req, res) => {
             const { email } = req.params;
             const { name, image_url, blood_group, district, upazila } = req.body;
-        
+
             try {
                 const updatedUser = await User.findOneAndUpdate(
                     { email },
@@ -193,18 +193,18 @@ async function run() {
                     },
                     { new: true }
                 );
-        
+
                 if (!updatedUser) {
                     return res.status(404).send({ message: 'User not found' });
                 }
-        
+
                 res.status(200).send(updatedUser);
             } catch (error) {
                 console.error(error);
                 res.status(500).send({ message: 'Failed to update user' });
             }
         });
-        
+
 
 
         // ====================> USER RELATED API -- END
@@ -305,41 +305,48 @@ async function run() {
             }
         });
 
-        // get all tests
-        app.get('/tests', async (req, res) => {
-            const result = await testsCollection.find().toArray()
-            // console.log(result);
-            res.send(result)
-        })
-
+        // // get all tests
         // app.get('/tests', async (req, res) => {
-        //     const { page = 1, date } = req.query;
-        //     const pageSize = 10; // Number of tests per page
-        //     const currentDate = new Date().toISOString().split('T')[0]; // Current date in YYYY-MM-DD format
+        //     const result = await testsCollection.find().toArray()
+        //     // console.log(result);
+        //     res.send(result)
+        // })
 
-        //     // Construct the query filter
-        //     const dateFilter = date ? new Date(date) : new Date(currentDate);
-        //     const filter = { date: { $gte: dateFilter } };
+        app.get('/tests', async (req, res) => {
+            const { page = 1, date } = req.query;
+            const pageSize = 6; // Number of tests per page
+            const currentDate = new Date().toISOString().split('T')[0]; // Current date in YYYY-MM-DD format
+        
+            // Construct the query filter
+            const dateFilter = date ? new Date(date) : new Date(currentDate);
+            const filter = { date: { $gte: dateFilter } };
+        
+            console.log(`Fetching tests for page: ${page}, date: ${date}`);
+        
+            try {
+                const result = await testsCollection.find(filter)
+                    .skip((page - 1) * pageSize)
+                    .limit(pageSize)
+                    .toArray();
+        
+                const totalTests = await testsCollection.countDocuments(filter);
+                const totalPages = Math.ceil(totalTests / pageSize);
+        
+                console.log(`Total tests found: ${totalTests}, total pages: ${totalPages}`);
+        
+                res.send({
+                    tests: result,
+                    totalPages,
+                    currentPage: Number(page),
+                });
+            } catch (error) {
+                console.error("Error fetching tests:", error);
+                res.status(500).send("Internal Server Error");
+            }
+        });
+        
+        
 
-        //     try {
-        //         const result = await testsCollection.find(filter)
-        //             .skip((page - 1) * pageSize)
-        //             .limit(pageSize)
-        //             .toArray();
-
-        //         const totalTests = await testsCollection.countDocuments(filter);
-        //         const totalPages = Math.ceil(totalTests / pageSize);
-
-        //         res.send({
-        //             tests: result,
-        //             totalPages,
-        //             currentPage: page,
-        //         });
-        //     } catch (error) {
-        //         console.error("Error fetching tests:", error);
-        //         res.status(500).send("Internal Server Error");
-        //     }
-        // });
 
         // Get a single room data from db using _id
         app.get('/test-details/:id', async (req, res) => {
