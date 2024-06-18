@@ -305,47 +305,85 @@ async function run() {
             }
         });
 
-        // // get all tests
-        // app.get('/tests', async (req, res) => {
-        //     const result = await testsCollection.find().toArray()
-        //     // console.log(result);
-        //     res.send(result)
-        // })
-
+        // get all tests
         app.get('/tests', async (req, res) => {
-            const { page = 1, date } = req.query;
-            const pageSize = 6; // Number of tests per page
-            const currentDate = new Date().toISOString().split('T')[0]; // Current date in YYYY-MM-DD format
-        
-            // Construct the query filter
-            const dateFilter = date ? new Date(date) : new Date(currentDate);
-            const filter = { date: { $gte: dateFilter } };
-        
-            console.log(`Fetching tests for page: ${page}, date: ${date}`);
-        
-            try {
-                const result = await testsCollection.find(filter)
-                    .skip((page - 1) * pageSize)
-                    .limit(pageSize)
-                    .toArray();
-        
-                const totalTests = await testsCollection.countDocuments(filter);
-                const totalPages = Math.ceil(totalTests / pageSize);
-        
-                console.log(`Total tests found: ${totalTests}, total pages: ${totalPages}`);
-        
-                res.send({
-                    tests: result,
-                    totalPages,
-                    currentPage: Number(page),
-                });
-            } catch (error) {
-                console.error("Error fetching tests:", error);
-                res.status(500).send("Internal Server Error");
+            const size = parseInt(req.query.size)
+            const page = parseInt(req.query.page) - 1
+            // console.log(size,page);
+            const filter = req.query.filter
+            let query = {}
+            if(filter) query = {date: filter}
+            console.log(filter);
+            const result = await testsCollection.find().skip(page * size).limit(size).toArray()
+            // console.log(result);
+            res.send(result)
+        })
+        // get all tests as a number
+        app.get('/tests-count', async (req, res) => {
+            const count = await testsCollection.countDocuments()
+            // console.log(result);
+            res.send({ count })
+        })
+
+
+        // Get all jobs data from db for pagination
+        app.get('/all-jobs', async (req, res) => {
+            const size = parseInt(req.query.size)
+            const page = parseInt(req.query.page) - 1
+            const filter = req.query.filter
+            const sort = req.query.sort
+            const search = req.query.search
+            console.log(size, page)
+
+            let query = {
+                job_title: { $regex: search, $options: 'i' },
             }
-        });
-        
-        
+            if (filter) query.category = filter
+            let options = {}
+            if (sort) options = { sort: { deadline: sort === 'asc' ? 1 : -1 } }
+            const result = await jobsCollection
+                .find(query, options)
+                .skip(page * size)
+                .limit(size)
+                .toArray()
+
+            res.send(result)
+        })
+
+        // app.get('/tests', async (req, res) => {
+        //     const { page = 1, date } = req.query;
+        //     const pageSize = 6; // Number of tests per page
+        //     const currentDate = new Date().toISOString().split('T')[0]; // Current date in YYYY-MM-DD format
+
+        //     // Construct the query filter
+        //     const dateFilter = date ? new Date(date) : new Date(currentDate);
+        //     const filter = { date: { $gte: dateFilter } };
+
+        //     console.log(`Fetching tests for page: ${page}, date: ${date}`);
+
+        //     try {
+        //         const result = await testsCollection.find(filter)
+        //             .skip((page - 1) * pageSize)
+        //             .limit(pageSize)
+        //             .toArray();
+
+        //         const totalTests = await testsCollection.countDocuments(filter);
+        //         const totalPages = Math.ceil(totalTests / pageSize);
+
+        //         console.log(`Total tests found: ${totalTests}, total pages: ${totalPages}`);
+
+        //         res.send({
+        //             tests: result,
+        //             totalPages,
+        //             currentPage: Number(page),
+        //         });
+        //     } catch (error) {
+        //         console.error("Error fetching tests:", error);
+        //         res.status(500).send("Internal Server Error");
+        //     }
+        // });
+
+
 
 
         // Get a single room data from db using _id
