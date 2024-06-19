@@ -305,19 +305,48 @@ async function run() {
             }
         });
 
-        // get all tests
+        // get all tests and implement filter and pagination also
         app.get('/tests', async (req, res) => {
-            const size = parseInt(req.query.size)
-            const page = parseInt(req.query.page) - 1
-            // console.log(size,page);
-            const filter = req.query.filter
-            let query = {}
-            if(filter) query = {date: filter}
-            console.log(filter);
-            const result = await testsCollection.find().skip(page * size).limit(size).toArray()
-            // console.log(result);
-            res.send(result)
-        })
+            const size = parseInt(req.query.size);
+            const page = parseInt(req.query.page) - 1;
+            const filter = req.query.filter;
+
+            let query = {};
+            if (filter) {
+                // Convert the filter string to an ISODate object
+                query = { date: new Date(filter).toLocaleDateString };
+            }
+            console.log('Filter:', filter); // Debug log
+            console.log('Query:', query);   // Debug log
+
+            const result = await testsCollection.find(query).skip(page * size).limit(size).toArray();
+            res.send(result);
+        });
+
+        // app.get('/tests', async (req, res) => {
+        //     try {
+        //         const size = parseInt(req.query.size);
+        //         const page = parseInt(req.query.page) - 1;
+        //         const filter = req.query.filter;
+
+        //         let query = { date: { $gte: new Date() } }; // Default to future dates
+
+        //         if (filter) {
+        //             // Convert the filter string to an ISODate object and override the default query
+        //             query = { date: { $eq: new Date(filter) } };
+        //         }
+
+        //         console.log('Filter:', filter); // Debug log
+        //         console.log('Query:', query);   // Debug log
+
+        //         const result = await testsCollection.find(query).skip(page * size).limit(size).toArray();
+        //         res.send(result);
+        //     } catch (error) {
+        //         console.error('Error fetching tests:', error);
+        //         res.status(500).send({ error: 'An error occurred while fetching tests' });
+        //     }
+        // });
+
         // get all tests as a number
         app.get('/tests-count', async (req, res) => {
             const count = await testsCollection.countDocuments()
@@ -325,68 +354,32 @@ async function run() {
             res.send({ count })
         })
 
-
-        // Get all jobs data from db for pagination
-        app.get('/all-jobs', async (req, res) => {
-            const size = parseInt(req.query.size)
-            const page = parseInt(req.query.page) - 1
-            const filter = req.query.filter
-            const sort = req.query.sort
-            const search = req.query.search
-            console.log(size, page)
-
-            let query = {
-                job_title: { $regex: search, $options: 'i' },
-            }
-            if (filter) query.category = filter
-            let options = {}
-            if (sort) options = { sort: { deadline: sort === 'asc' ? 1 : -1 } }
-            const result = await jobsCollection
-                .find(query, options)
-                .skip(page * size)
-                .limit(size)
-                .toArray()
-
-            res.send(result)
-        })
-
-        // app.get('/tests', async (req, res) => {
-        //     const { page = 1, date } = req.query;
-        //     const pageSize = 6; // Number of tests per page
-        //     const currentDate = new Date().toISOString().split('T')[0]; // Current date in YYYY-MM-DD format
-
-        //     // Construct the query filter
-        //     const dateFilter = date ? new Date(date) : new Date(currentDate);
-        //     const filter = { date: { $gte: dateFilter } };
-
-        //     console.log(`Fetching tests for page: ${page}, date: ${date}`);
-
+        // app.get('/tests-count', async (req, res) => {
         //     try {
-        //         const result = await testsCollection.find(filter)
-        //             .skip((page - 1) * pageSize)
-        //             .limit(pageSize)
-        //             .toArray();
+        //         const filter = req.query.filter;
 
-        //         const totalTests = await testsCollection.countDocuments(filter);
-        //         const totalPages = Math.ceil(totalTests / pageSize);
+        //         let query = { date: { $gte: new Date() } }; // Default to future dates
 
-        //         console.log(`Total tests found: ${totalTests}, total pages: ${totalPages}`);
+        //         if (filter) {
+        //             // Convert the filter string to an ISODate object and override the default query
+        //             query = { date: { $eq: new Date(filter) } };
+        //         }
 
-        //         res.send({
-        //             tests: result,
-        //             totalPages,
-        //             currentPage: Number(page),
-        //         });
+        //         console.log('Filter:', filter); // Debug log
+        //         console.log('Query:', query);   // Debug log
+
+        //         const count = await testsCollection.countDocuments(query);
+        //         res.send({ count });
         //     } catch (error) {
-        //         console.error("Error fetching tests:", error);
-        //         res.status(500).send("Internal Server Error");
+        //         console.error('Error fetching tests count:', error);
+        //         res.status(500).send({ error: 'An error occurred while fetching tests count' });
         //     }
         // });
 
 
 
 
-        // Get a single room data from db using _id
+        // Get a single test data for showing test details from db using id
         app.get('/test-details/:id', async (req, res) => {
             const id = req.params.id
             const query = { _id: new ObjectId(id) }
@@ -394,6 +387,7 @@ async function run() {
             res.send(result)
         })
 
+        //Update all add test data by specific id
         app.put('/test/:id', async (req, res) => {
             const id = req.params.id;
             const updateData = req.body;
@@ -405,7 +399,7 @@ async function run() {
             res.send(result);
         });
 
-        // Delete test by ID
+        // Delete test by by specific id
         app.delete('/test/:id', async (req, res) => {
             try {
                 const id = req.params.id;
@@ -417,6 +411,7 @@ async function run() {
             }
         });
 
+        // Get all tests by specific email
         app.get('/tests/:email', async (req, res) => {
             const email = req.params.email
             const query = { 'adminInfo.email': email }
@@ -429,7 +424,7 @@ async function run() {
 
 
         // ====================> APPOINTMENTS RELATED API -- START
-        // Save add test data to database
+        // Save a appointment data to database
         app.post('/appointment', async (req, res) => {
             const appointmentData = req.body;
             const { testId } = appointmentData;
@@ -473,13 +468,24 @@ async function run() {
             }
         });
 
-        // get all tests
+        // Get all appointments and implement search 
         app.get('/appointments', async (req, res) => {
-            const result = await appointmentsCollection.find().toArray()
-            // console.log(result);
-            res.send(result)
-        })
+            try {
+                const searchData = req.query.search || '';
+                // console.log('Search Data:', searchData);
+                let query = { 'bookerInfo.email': { $regex: searchData, $options: 'i' } };
+                // console.log('Query:', query);
+                const result = await appointmentsCollection.find(query).toArray();
+                // console.log('Result:', result);
+                res.send(result);
+            } catch (error) {
+                // console.error('Error fetching appointments:', error);
+                res.status(500).send({ error: 'An error occurred while fetching appointments' });
+            }
+        });
 
+
+        // Delete a appointment by specific ID
         app.delete('/appointment/:id', async (req, res) => {
             const id = req.params.id;
             const session = client.startSession();
@@ -524,7 +530,7 @@ async function run() {
                 session.endSession();
             }
         });
-
+        // Update report_status of a appointment by specific ID
         app.put('/appointment/:id', async (req, res) => {
             console.log('Received PUT request to update report_status');
             const id = req.params.id;
@@ -548,22 +554,7 @@ async function run() {
             }
         });
 
-        app.get('/tests/:email', async (req, res) => {
-            const email = req.params.email
-            const query = { 'adminInfo.email': email }
-            const result = await testsCollection.find(query).toArray()
-            // console.log(result);
-            res.send(result)
-        })
-
-
-        // app.get('/appointments/:email', async (req, res) => {
-        //     const email = req.params.email
-        //     const query = { 'bookerInfo.email': email }
-        //     const result = await appointmentsCollection.find(query).toArray()
-        //     // console.log(result);
-        //     res.send(result)
-        // })
+        // Get all appointments by specific email
         app.get('/appointments/:email', async (req, res) => {
             const email = req.params.email;
             const query = { 'bookerInfo.email': email };
@@ -576,12 +567,11 @@ async function run() {
                 res.status(500).send({ message: 'Failed to fetch appointments', error: error.message });
             }
         });
-
-
-
         // ====================> APPOINTMENTS RELATED API -- END
 
-        // payment intent
+
+
+        // Create Stripe payment intent
         app.post('/create-payment-intent', async (req, res) => {
             const { price } = req.body;
             const amount = parseInt(price * 100);
@@ -598,102 +588,12 @@ async function run() {
             })
         });
 
-
-        // app.get('/payments/:email', verifyToken, async (req, res) => {
-        //     const query = { email: req.params.email }
-        //     if (req.params.email !== req.decoded.email) {
-        //         return res.status(403).send({ message: 'forbidden access' });
-        //     }
-        //     const result = await paymentCollection.find(query).toArray();
-        //     res.send(result);
-        // })
-
         app.post('/payments', async (req, res) => {
             const payment = req.body;
             const paymentResult = await paymentCollection.insertOne(payment);
 
             res.send({ paymentResult });
         })
-
-        // stats or analytics
-        // app.get('/admin-stats', verifyToken, verifyAdmin, async (req, res) => {
-        //     const users = await userCollection.estimatedDocumentCount();
-        //     const menuItems = await menuCollection.estimatedDocumentCount();
-        //     const orders = await paymentCollection.estimatedDocumentCount();
-
-        //     // this is not the best way
-        //     // const payments = await paymentCollection.find().toArray();
-        //     // const revenue = payments.reduce((total, payment) => total + payment.price, 0);
-
-        //     const result = await paymentCollection.aggregate([
-        //         {
-        //             $group: {
-        //                 _id: null,
-        //                 totalRevenue: {
-        //                     $sum: '$price'
-        //                 }
-        //             }
-        //         }
-        //     ]).toArray();
-
-        //     const revenue = result.length > 0 ? result[0].totalRevenue : 0;
-
-        //     res.send({
-        //         users,
-        //         menuItems,
-        //         orders,
-        //         revenue
-        //     })
-        // })
-
-
-        // order status
-        /**
-         * ----------------------------
-         *    NON-Efficient Way
-         * ------------------------------
-         * 1. load all the payments
-         * 2. for every menuItemIds (which is an array), go find the item from menu collection
-         * 3. for every item in the menu collection that you found from a payment entry (document)
-        */
-
-        // using aggregate pipeline
-        // app.get('/order-stats', verifyToken, verifyAdmin, async (req, res) => {
-        //     const result = await paymentCollection.aggregate([
-        //         {
-        //             $unwind: '$menuItemIds'
-        //         },
-        //         {
-        //             $lookup: {
-        //                 from: 'menu',
-        //                 localField: 'menuItemIds',
-        //                 foreignField: '_id',
-        //                 as: 'menuItems'
-        //             }
-        //         },
-        //         {
-        //             $unwind: '$menuItems'
-        //         },
-        //         {
-        //             $group: {
-        //                 _id: '$menuItems.category',
-        //                 quantity: { $sum: 1 },
-        //                 revenue: { $sum: '$menuItems.price' }
-        //             }
-        //         },
-        //         {
-        //             $project: {
-        //                 _id: 0,
-        //                 category: '$_id',
-        //                 quantity: '$quantity',
-        //                 revenue: '$revenue'
-        //             }
-        //         }
-        //     ]).toArray();
-
-        //     res.send(result);
-
-        // })
 
         // Send a ping to confirm a successful connection
         // await client.db("admin").command({ ping: 1 });
@@ -713,16 +613,3 @@ app.get('/', (req, res) => {
 app.listen(port, () => {
     console.log(`DCMS is sitting on port ${port}`);
 })
-
-/**
- * --------------------------------
- *      NAMING CONVENTION
- * --------------------------------
- * app.get('/users')
- * app.get('/users/:id')
- * app.post('/users')
- * app.put('/users/:id')
- * app.patch('/users/:id')
- * app.delete('/users/:id')
- * 
-*/
