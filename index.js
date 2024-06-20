@@ -184,10 +184,6 @@ async function run() {
             const result = await usersCollection.updateOne(query, updateDoc)
             res.send(result)
         });
-
-
-
-
         // ====================> USER RELATED API -- END
 
 
@@ -267,8 +263,6 @@ async function run() {
                 res.status(500).send('Failed to delete banner');
             }
         });
-
-
         // ====================> BANNER RELATED API -- END
 
 
