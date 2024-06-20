@@ -175,35 +175,16 @@ async function run() {
 
         // Update user data
         app.put('/user/update/:email', async (req, res) => {
-            const { email } = req.params;
-            const { name, image_url, blood_group, district, upazila } = req.body;
-
-            try {
-                const updatedUser = await User.findOneAndUpdate(
-                    { email },
-                    {
-                        $set: {
-                            name,
-                            image_url,
-                            blood_group,
-                            district,
-                            upazila,
-                            updatedAt: new Date(),
-                        },
-                    },
-                    { new: true }
-                );
-
-                if (!updatedUser) {
-                    return res.status(404).send({ message: 'User not found' });
-                }
-
-                res.status(200).send(updatedUser);
-            } catch (error) {
-                console.error(error);
-                res.status(500).send({ message: 'Failed to update user' });
+            const email = req.params.email
+            const user = req.body
+            const query = { email }
+            const updateDoc = {
+                $set: { ...user, timestamp: Date.now() },
             }
+            const result = await usersCollection.updateOne(query, updateDoc)
+            res.send(result)
         });
+
 
 
 
