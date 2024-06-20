@@ -368,6 +368,25 @@ async function run() {
             res.send(result)
         })
 
+        // Get data for featured Section
+        app.get('/featured-tests', async (req, res) => {
+            try {
+                const popularTests = await appointmentsCollection.aggregate([
+                    { $group: { _id: "$testId", count: { $sum: 1 } } },
+                    { $sort: { count: -1 } },
+                    { $limit: 10 }
+                ]).toArray();
+
+                const testIds = popularTests.map(test => new ObjectId(test._id));
+
+                const featuredTests = await testsCollection.find({ _id: { $in: testIds } }).toArray();
+
+                res.json(featuredTests);
+            } catch (err) {
+                res.status(500).send({ error: err.message });
+            }
+        });
+
         //Update all add test data by specific id
         app.put('/test/:id', async (req, res) => {
             const id = req.params.id;
