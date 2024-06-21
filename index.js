@@ -96,9 +96,6 @@ async function run() {
             res.send(result)
         })
 
-
-
-
         // ====================> USER RELATED API -- START
 
         // Save user data to mongodb database
@@ -137,15 +134,8 @@ async function run() {
             res.send(result)
         })
 
-        app.get('/user/:email', async (req, res) => {
-            const email = req.params.email
-            const query = { email }
-            const result = await usersCollection.findOne(query)
-            res.send(result)
-        })
-
         //update a user role and status
-        app.patch('/users/update/:email', verifyToken, async (req, res) => {
+        app.patch('/users/update/:email', async (req, res) => {
             const email = req.params.email
             const user = req.body
             const query = { email }
@@ -157,7 +147,7 @@ async function run() {
         })
 
         // Update user data
-        app.put('/user/update/:email', verifyToken, async (req, res) => {
+        app.put('/user/update/:email', async (req, res) => {
             const email = req.params.email
             const user = req.body
             const query = { email }
@@ -251,7 +241,7 @@ async function run() {
 
 
         // ====================> TEST RELATED API -- START
-        // Add a new banner
+        // add test info save into db
         app.post('/test', async (req, res) => {
             try {
                 const testData = req.body
@@ -265,75 +255,52 @@ async function run() {
 
         // get all tests and implement filter and pagination also
         app.get('/tests', verifyToken, async (req, res) => {
-            const size = parseInt(req.query.size);
-            const page = parseInt(req.query.page) - 1;
-            const filter = req.query.filter;
+            const size = parseInt(req.query.size) || 10; // Default size to 10 if not provided
+            const page = parseInt(req.query.page) - 1 || 0; // Default page to 0 if not provided
+
             let query = {};
-            if (filter) {
-                // Convert the filter string to an ISODate object
-                query = { date: new Date(filter).toLocaleDateString };
-            }
-            console.log('Filter:', filter); // Debug log
+
+            // Default to today's date if no filter is provided
+            const today = new Date(); // Current date object
+            today.setHours(0, 0, 0, 0); // Set hours, minutes, seconds, and milliseconds to 0 to get start of the day
+
+            // Filter for dates greater than or equal to today
+            query.date = { $gte: today.toLocaleDateString('en-US') }; // Convert today's date to MM/DD/YYYY format
+
             console.log('Query:', query);   // Debug log
 
-            const result = await testsCollection.find(query).skip(page * size).limit(size).toArray();
-            res.send(result);
+            try {
+                const result = await testsCollection
+                    .find(query)
+                    .sort({ date: 1 }) // Sort ascending by date, if needed
+                    .skip(page * size)
+                    .limit(size)
+                    .toArray();
+                res.send(result);
+            } catch (error) {
+                console.error('Error fetching tests:', error);
+                res.status(500).send('Internal Server Error');
+            }
         });
 
-        // app.get('/tests', async (req, res) => {
-        //     try {
-        //         const size = parseInt(req.query.size);
-        //         const page = parseInt(req.query.page) - 1;
-        //         const filter = req.query.filter;
 
-        //         let query = { date: { $gte: new Date() } }; // Default to future dates
-
-        //         if (filter) {
-        //             // Convert the filter string to an ISODate object and override the default query
-        //             query = { date: { $eq: new Date(filter) } };
-        //         }
-
-        //         console.log('Filter:', filter); // Debug log
-        //         console.log('Query:', query);   // Debug log
-
-        //         const result = await testsCollection.find(query).skip(page * size).limit(size).toArray();
-        //         res.send(result);
-        //     } catch (error) {
-        //         console.error('Error fetching tests:', error);
-        //         res.status(500).send({ error: 'An error occurred while fetching tests' });
-        //     }
-        // });
 
         // get all tests as a number
         app.get('/tests-count', async (req, res) => {
-            const count = await testsCollection.countDocuments()
-            // console.log(result);
-            res.send({ count })
-        })
+            try {
+                const today = new Date(); // Current date object
+                today.setHours(0, 0, 0, 0); // Set hours, minutes, seconds, and milliseconds to 0 to get start of the day
 
-        // app.get('/tests-count', async (req, res) => {
-        //     try {
-        //         const filter = req.query.filter;
+                // Filter for dates greater than or equal to today
+                const query = { date: { $gte: today.toLocaleDateString('en-US') } };
 
-        //         let query = { date: { $gte: new Date() } }; // Default to future dates
-
-        //         if (filter) {
-        //             // Convert the filter string to an ISODate object and override the default query
-        //             query = { date: { $eq: new Date(filter) } };
-        //         }
-
-        //         console.log('Filter:', filter); // Debug log
-        //         console.log('Query:', query);   // Debug log
-
-        //         const count = await testsCollection.countDocuments(query);
-        //         res.send({ count });
-        //     } catch (error) {
-        //         console.error('Error fetching tests count:', error);
-        //         res.status(500).send({ error: 'An error occurred while fetching tests count' });
-        //     }
-        // });
-
-
+                const count = await testsCollection.countDocuments(query);
+                res.send({ count });
+            } catch (error) {
+                console.error('Error counting documents:', error);
+                res.status(500).send('Internal Server Error');
+            }
+        });
 
 
         // Get a single test data for showing test details from db using id
