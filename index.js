@@ -257,9 +257,9 @@ async function run() {
         app.get('/tests', verifyToken, async (req, res) => {
             const size = parseInt(req.query.size) || 10; // Default size to 10 if not provided
             const page = parseInt(req.query.page) - 1 || 0; // Default page to 0 if not provided
-
+            const filter = req.query.filter
+            // console.log(filter);
             let query = {};
-
             // Default to today's date if no filter is provided
             const today = new Date(); // Current date object
             today.setHours(0, 0, 0, 0); // Set hours, minutes, seconds, and milliseconds to 0 to get start of the day
@@ -267,7 +267,8 @@ async function run() {
             // Filter for dates greater than or equal to today
             query.date = { $gte: today.toLocaleDateString('en-US') }; // Convert today's date to MM/DD/YYYY format
 
-            console.log('Query:', query);   // Debug log
+            if (filter) query = { date: filter }
+            // console.log('Query:', query);   // Debug log
 
             try {
                 const result = await testsCollection
@@ -282,8 +283,6 @@ async function run() {
                 res.status(500).send('Internal Server Error');
             }
         });
-
-
 
         // get all tests as a number
         app.get('/tests-count', async (req, res) => {
