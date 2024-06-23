@@ -175,7 +175,7 @@ async function run() {
         });
 
         // Get all banners
-        app.get('/banners', verifyToken, async (req, res) => {
+        app.get('/banners', async (req, res) => {
             try {
                 const result = await bannersCollection.find().toArray();
                 res.send(result); // Send response with array of banners
@@ -311,7 +311,7 @@ async function run() {
         })
 
         // Get data for featured Section
-        app.get('/featured-tests', verifyToken, async (req, res) => {
+        app.get('/featured-tests', async (req, res) => {
             try {
                 const popularTests = await appointmentsCollection.aggregate([
                     { $group: { _id: "$testId", count: { $sum: 1 } } },
@@ -323,7 +323,7 @@ async function run() {
 
                 const featuredTests = await testsCollection.find({ _id: { $in: testIds } }).toArray();
 
-                res.json(featuredTests);
+                res.send(featuredTests);
             } catch (err) {
                 res.status(500).send({ error: err.message });
             }
@@ -418,6 +418,20 @@ async function run() {
                 let query = { 'bookerInfo.email': { $regex: searchData, $options: 'i' } };
                 // console.log('Query:', query);
                 const result = await appointmentsCollection.find(query).toArray();
+                // console.log('Result:', result);
+                res.send(result);
+            } catch (error) {
+                // console.error('Error fetching appointments:', error);
+                res.status(500).send({ error: 'An error occurred while fetching appointments' });
+            }
+        });
+
+        // Get all appointments and implement search 
+        app.get('/appointmentss', async (req, res) => {
+            try {
+                // console.log('Search Data:', searchData);
+                // console.log('Query:', query);
+                const result = await appointmentsCollection.find().toArray();
                 // console.log('Result:', result);
                 res.send(result);
             } catch (error) {
