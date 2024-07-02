@@ -42,3 +42,8 @@ To run this project locally, follow these steps:
    ```bash
    git clone https://github.com/mithuchandrabiswas/Diagnostic-Center-Management-System-HealthFlow--Client.git
    cd Diagnostic-Center-Management-System-HealthFlow--Client
+  
+2. **Install NPM Package**:
+   npm install
+3. **Create a .env file your root directory**:
+4. **npm start**:
